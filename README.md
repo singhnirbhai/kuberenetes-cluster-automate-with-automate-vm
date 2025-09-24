@@ -1,104 +1,103 @@
-Kubernetes on Vagrant + VMware Fusion (Apple Silicon)
-This repository provisions a multi-node Kubernetes cluster using Vagrant and shell provisioners on macOS Apple Silicon with VMware Fusion. It creates a control-plane (“master”) and one or more worker nodes, installs containerd, disables swap, installs kubeadm/kubelet/kubectl, initializes the control-plane, downloads Calico, exports kubeconfig, and prepares workers. The join step is manual by design.
+# Kubernetes on Vagrant + VMware Fusion (Apple Silicon)
+# This repository provisions a multi-node Kubernetes cluster using Vagrant and shell provisioners on macOS Apple Silicon with VMware Fusion. It creates a control-plane (“master”) and one or more worker nodes, installs containerd, disables swap, installs kubeadm/kubelet/kubectl, initializes the control-plane, downloads Calico, exports kubeconfig, and prepares workers. The join step is manual by design.
 
-Prerequisites
-macOS on Apple Silicon (M1/M2/M3) with VMware Fusion installed.
+# Prerequisites; macOS on Apple Silicon (M1/M2/M3) with VMware Fusion installed.
 
-Vagrant with the VMware provider enabled.
+## Vagrant with the VMware provider enabled.
 
-An ARM64-compatible Vagrant box for Ubuntu with the vmware_desktop provider. The example uses “bento/ubuntu-22.04”.
+## An ARM64-compatible Vagrant box for Ubuntu with the vmware_desktop provider. The example uses “bento/ubuntu-22.04”.
 
-At least 8 GB RAM recommended (16 GB+ for comfort).
+## At least 8 GB RAM recommended (16 GB+ for comfort).
 
-What this setup does
-Creates 1 control-plane and N worker VMs.
+# What this setup does
+## Creates 1 control-plane and N worker VMs.
 
-Installs containerd and enables SystemdCgroup in /etc/containerd/config.toml.
+## Installs containerd and enables SystemdCgroup in /etc/containerd/config.toml.
 
-Disables swap and ensures it stays off across reboots.
+## Disables swap and ensures it stays off across reboots.
 
-Installs kubeadm, kubelet, kubectl from pkgs.k8s.io.
+## Installs kubeadm, kubelet, kubectl from pkgs.k8s.io.
 
-Initializes the control-plane with a specified Pod CIDR.
+## Initializes the control-plane with a specified Pod CIDR.
 
-Downloads Calico manifest and applies it on first init.
+## Downloads Calico manifest and applies it on first init.
 
-Exports kubeconfig to the host in ./configs/config for kubectl access.
+## Exports kubeconfig to the host in ./configs/config for kubectl access.
 
-Leaves worker nodes ready for a manual kubeadm join.
+## Leaves worker nodes ready for a manual kubeadm join.
 
-What it does NOT do (by request)
-Does not automatically create/print or distribute the kubeadm join token/command.
+## What it does NOT do (by request)
+## Does not automatically create/print or distribute the kubeadm join token/command.
 
-Does not automatically join workers to the control-plane.
+## Does not automatically join workers to the control-plane.
 
-Topology
-Control-plane VM: “master”
+## Topology
+## Control-plane VM: “master”
 
-Worker VMs: “worker-1”, “worker-2”, … (configurable count)
+## Worker VMs: “worker-1”, “worker-2”, … (configurable count)
 
-Private network via DHCP
+## Private network via DHCP
 
-Quick start
-Copy the Vagrantfile below into a new directory.
+## Quick start
+## Copy the Vagrantfile below into a new directory.
 
-Bring up the environment:
+## Bring up the environment:
 
-vagrant up --provider=vmware_fusion
+## vagrant up --provider=vmware_fusion
 
-SSH to master and get the join command whenever ready:
+## SSH to master and get the join command whenever ready:
 
-vagrant ssh master
+## vagrant ssh master
 
-sudo kubeadm token create --print-join-command
+## sudo kubeadm token create --print-join-command
 
-SSH to each worker and run the printed join command:
+## SSH to each worker and run the printed join command:
 
-vagrant ssh worker-1
+## vagrant ssh worker-1
 
-sudo <paste the kubeadm join … line from master>
+## sudo <paste the kubeadm join … line from master>
 
-Ensure Calico is applied (it’s applied once automatically on first init). Re-apply if needed:
+## Ensure Calico is applied (it’s applied once automatically on first init). Re-apply if needed:
 
-vagrant ssh master
+## vagrant ssh master
 
-kubectl apply -f /vagrant/configs/calico.yaml
+## kubectl apply -f /vagrant/configs/calico.yaml
 
-From the host, use the exported kubeconfig:
+## From the host, use the exported kubeconfig:
 
-export KUBECONFIG="$PWD/configs/config"
+## export KUBECONFIG="$PWD/configs/config"
 
-kubectl get nodes
+## kubectl get nodes
 
-Customization
-WORKER_COUNT: change how many worker nodes are created.
+## Customization
+## WORKER_COUNT: change how many worker nodes are created.
 
-KUBE_VERSION: pin Kubernetes packages (e.g., “=1.30.4-1.1”) or leave blank for repo’s current default.
+## KUBE_VERSION: pin Kubernetes packages (e.g., “=1.30.4-1.1”) or leave blank for repo’s current default.
 
-POD_CIDR: default 192.168.0.0/16 matches Calico manifest; adjust as needed and ensure the network plugin manifest is compatible.
+## POD_CIDR: default 192.168.0.0/16 matches Calico manifest; adjust as needed and ensure the network plugin manifest is compatible.
 
-Cleanup
-Stop all VMs: vagrant halt
+## Cleanup
+## Stop all VMs: vagrant halt
 
-Destroy all VMs: vagrant destroy -f
+## Destroy all VMs: vagrant destroy -f
 
-Remove local state: rm -rf .vagrant
+## Remove local state: rm -rf .vagrant
 
-Troubleshooting
-If kubelet shows NotReady, wait for Calico and core components to become Ready.
+## Troubleshooting
+## If kubelet shows NotReady, wait for Calico and core components to become Ready.
 
-Ensure swap is disabled on all nodes (free -h; swapon --show should be empty).
+## Ensure swap is disabled on all nodes (free -h; swapon --show should be empty).
 
-If changing Pod CIDR, use a manifest that matches the chosen CIDR.
+## If changing Pod CIDR, use a manifest that matches the chosen CIDR.
 
-For repeated runs, remove .vagrant or re-provision with vagrant provision if needed.
+## For repeated runs, remove .vagrant or re-provision with vagrant provision if needed.
 
-Vagrantfile
-Paste the following as Vagrantfile in your project directory.
+## Vagrantfile
+## Paste the following as Vagrantfile in your project directory.
 
-ruby
-Vagrant.configure("2") do |config|
-  # ARM64 Ubuntu box with vmware_desktop provider (Apple Silicon)
+```bash
+ Vagrant.configure("2") do |config|
+ # ARM64 Ubuntu box with vmware_desktop provider (Apple Silicon)
   BOX = "bento/ubuntu-22.04"
 
   MASTER_HOSTNAME = "master"
@@ -227,19 +226,19 @@ Vagrant.configure("2") do |config|
     end
   end
 end
-Manual join workflow
-On master:
+```
+## Manual join workflow
+  On master:
+```bash
+$ kubeadm token create --print-join-command
+```
+## Toekn Paste on worker node
 
-kubeadm token create --print-join-command
-
-On each worker:
-
-sudo <paste the kubeadm join … line printed on master>
-
-Re-apply Calico if needed on master:
-
+## Re-apply Calico if needed on master:
+```bash
 kubectl apply -f /vagrant/configs/calico.yaml
-
-List nodes:
-
+```
+## List nodes:
+```bash
 kubectl get nodes
+```
